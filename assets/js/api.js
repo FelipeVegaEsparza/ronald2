@@ -11,6 +11,7 @@ const CACHE_TTL = {
   news: 5 * 60 * 1000,        // 5 minutos
   sponsors: 30 * 60 * 1000,   // 30 minutos
   promotions: 30 * 60 * 1000, // 30 minutos
+  galleries: 15 * 60 * 1000,  // 15 minutos
   social: 60 * 60 * 1000,     // 1 hora
   sonic: 30 * 1000,           // 30 segundos
   default: 10 * 60 * 1000     // 10 minutos default
@@ -237,6 +238,11 @@ export async function getVideos() {
 export async function getSponsors() {
   const base = await getApiBase();
   return fetchJSON(`${base}/sponsors`, { cacheTTL: CACHE_TTL.sponsors });
+}
+
+export async function getGalleries() {
+  const base = await getApiBase();
+  return fetchJSON(`${base}/galleries`, { cacheTTL: CACHE_TTL.galleries });
 }
 
 export async function getPromotions() {

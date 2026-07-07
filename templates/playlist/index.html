@@ -243,6 +243,10 @@
               <i class="fas fa-video"></i>
               <span>Ranking Musical</span>
             </a></li>
+            <li><a href="#" class="menu-item" data-section="galleries">
+              <i class="fas fa-images"></i>
+              <span>Galerias</span>
+            </a></li>
           </ul>
         </div>
         
@@ -515,6 +519,20 @@
           </div>
         </div>
 
+        <!-- Galleries View -->
+        <div id="galleries-view" class="content-view">
+          <div class="view-header">
+            <h1>Galerias</h1>
+            <p>Explora nuestras galerías de imágenes</p>
+          </div>
+          <div class="galleries-grid" id="galleries-grid">
+            <div class="loading-content">
+              <i class="fas fa-spinner fa-spin"></i>
+              <span>Cargando galerías...</span>
+            </div>
+          </div>
+        </div>
+
         <!-- Sponsors View -->
         <div id="sponsors-view" class="content-view">
           <div class="view-header">
@@ -772,6 +790,37 @@
             Ver Oferta
           </a>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Gallery Modal -->
+  <div class="gallery-modal" id="gallery-modal">
+    <div class="gallery-modal-content">
+      <div class="gallery-modal-header">
+        <div class="gallery-modal-info">
+          <i class="fas fa-images gallery-icon"></i>
+          <h2 id="gallery-modal-title">Galería</h2>
+        </div>
+        <button class="gallery-modal-close" onclick="streamApp.closeGalleryModal()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="gallery-modal-body">
+        <p class="gallery-modal-description" id="gallery-modal-description"></p>
+        <div class="gallery-viewer">
+          <button class="gallery-nav-btn gallery-prev" id="gallery-prev-btn" aria-label="Imagen anterior">
+            <i class="fas fa-chevron-left"></i>
+          </button>
+          <div class="gallery-image-wrapper">
+            <img class="gallery-modal-image" id="gallery-modal-image" src="" alt="">
+            <div class="gallery-counter" id="gallery-counter">1 / 1</div>
+          </div>
+          <button class="gallery-nav-btn gallery-next" id="gallery-next-btn" aria-label="Siguiente imagen">
+            <i class="fas fa-chevron-right"></i>
+          </button>
+        </div>
+        <div class="gallery-thumbs" id="gallery-thumbs"></div>
       </div>
     </div>
   </div>

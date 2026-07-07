@@ -14,6 +14,7 @@ import {
   getVideocastById,
   getVideos,
   getSponsors,
+  getGalleries,
   getPromotions,
   getSocialNetworks,
   getCurrentSong,
@@ -31,6 +32,7 @@ class DataManager {
       podcasts: null,
       videocasts: null,
       sponsors: null,
+      galleries: null,
       promotions: null,
       socialNetworks: null,
       currentSong: null,
@@ -202,6 +204,19 @@ class DataManager {
     }
   }
 
+  // Obtener galerías
+  async loadGalleries() {
+    try {
+      const data = await getGalleries();
+      this.data.galleries = data;
+      this.emit('galleriesLoaded', data);
+      return data;
+    } catch (error) {
+      console.error('DataManager: Error loading galleries:', error);
+      return [];
+    }
+  }
+
   // Obtener promociones
   async loadPromotions() {
     try {
@@ -263,7 +278,8 @@ class DataManager {
       this.loadPodcasts(),
       this.loadVideocasts(),
       this.loadSponsors(),
-      this.loadPromotions()
+      this.loadPromotions(),
+      this.loadGalleries()
     ]);
   }
 
@@ -293,6 +309,7 @@ class DataManager {
       podcasts: null,
       videocasts: null,
       sponsors: null,
+      galleries: null,
       promotions: null,
       socialNetworks: null,
       currentSong: null,
@@ -308,6 +325,7 @@ class DataManager {
   getPodcasts() { return this.data.podcasts; }
   getVideocasts() { return this.data.videocasts; }
   getSponsors() { return this.data.sponsors; }
+  getGalleries() { return this.data.galleries; }
   getPromotions() { return this.data.promotions; }
   getCurrentSong() { return this.data.currentSong; }
   getVideoStreamUrl() { return this.data.videoStreamUrl; }

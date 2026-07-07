@@ -140,6 +140,7 @@ class PlaylistTemplate extends TemplateBase {
         this.loadPodcasts(),
         this.loadVideocasts(),
         this.loadSponsors(),
+        this.loadGalleries(),
         this.loadRecentTracks()
       ]);
     } catch (error) {
@@ -385,6 +386,34 @@ class PlaylistTemplate extends TemplateBase {
     container.innerHTML = sponsorsHtml;
   }
 
+  // Cargar galerías
+  async loadGalleries() {
+    try {
+      const dataManager = getDataManager();
+      const galleries = await dataManager.loadGalleries();
+
+      const list = Array.isArray(galleries) ? galleries : (galleries?.data || []);
+      this.galleriesCache = [];
+
+      for (const gallery of list) {
+        const images = (gallery.images || []).slice().sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+        const resolvedImages = [];
+        for (const img of images) {
+          if (img.imageUrl) {
+            const fullUrl = await dataManager.getImageUrl(img.imageUrl);
+            resolvedImages.push({ ...img, imageUrl: fullUrl });
+          } else {
+            resolvedImages.push(img);
+          }
+        }
+        this.galleriesCache.push({ ...gallery, images: resolvedImages });
+      }
+    } catch (error) {
+      console.error('PlaylistTemplate: Error loading galleries:', error);
+      this.galleriesCache = [];
+    }
+  }
+
   // Setup de navegación
   setupNavigation() {
     if (this.navigationSetup) return;
@@ -476,6 +505,7 @@ class PlaylistTemplate extends TemplateBase {
     this.closeVideocastModal();
     this.closeVideoModal();
     this.closeNewsModal();
+    this.closeGalleryModal();
     
     // Hide all content views first
     document.querySelectorAll('.content-view').forEach(view => {
@@ -544,6 +574,9 @@ class PlaylistTemplate extends TemplateBase {
         break;
       case 'videos':
         await this.loadAllVideos();
+        break;
+      case 'galleries':
+        await this.loadAllGalleries();
         break;
       case 'tv-online':
         console.log('TV Online section');
@@ -1056,6 +1089,154 @@ class PlaylistTemplate extends TemplateBase {
     if (modal) modal.classList.remove('active');
   }
 
+  async loadAllGalleries() {
+    const container = document.getElementById('galleries-grid');
+    if (!container) return;
+
+    try {
+      if (!this.galleriesCache || this.galleriesCache.length === 0) {
+        await this.loadGalleries();
+      }
+
+      const galleries = this.galleriesCache || [];
+
+      if (galleries.length === 0) {
+        container.innerHTML = `
+          <div class="gallery-empty">
+            <i class="fas fa-images"></i>
+            <p>No hay galerías disponibles</p>
+          </div>
+        `;
+        return;
+      }
+
+      const galleriesHtml = galleries.map((gallery) => {
+        const cover = gallery.images && gallery.images.length > 0 ? gallery.images[0].imageUrl : '';
+        const count = (gallery.images || []).length;
+        return `
+          <div class="gallery-card" data-gallery-id="${gallery.id}" role="button" tabindex="0">
+            <div class="gallery-card-cover">
+              ${cover
+                ? `<img src="${cover}" alt="${gallery.title}" loading="lazy">`
+                : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1db954,#1ed760);color:#fff;font-size:3rem;"><i class="fas fa-images"></i></div>`
+              }
+              <div class="gallery-card-overlay">
+                <span class="gallery-card-view">
+                  <i class="fas fa-expand"></i>
+                  Ver galería
+                </span>
+              </div>
+            </div>
+            <div class="gallery-card-info">
+              <h3>${gallery.title || 'Galería'}</h3>
+              ${gallery.description ? `<p>${gallery.description}</p>` : ''}
+              <div class="gallery-card-meta">
+                <span class="gallery-card-count">
+                  <i class="fas fa-image"></i> ${count} ${count === 1 ? 'imagen' : 'imágenes'}
+                </span>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      container.innerHTML = galleriesHtml;
+    } catch (error) {
+      console.error('PlaylistTemplate: Error loading galleries:', error);
+      container.innerHTML = '<div class="error-message">Error al cargar las galerías</div>';
+    }
+  }
+
+  openGalleryModal(galleryId) {
+    const gallery = (this.galleriesCache || []).find(g => g.id === galleryId);
+    if (!gallery) return;
+
+    const images = gallery.images || [];
+    if (images.length === 0) return;
+
+    const modal = document.getElementById('gallery-modal');
+    const titleEl = document.getElementById('gallery-modal-title');
+    const descEl = document.getElementById('gallery-modal-description');
+    const imageEl = document.getElementById('gallery-modal-image');
+    const counterEl = document.getElementById('gallery-counter');
+    const thumbsEl = document.getElementById('gallery-thumbs');
+    const prevBtn = document.getElementById('gallery-prev-btn');
+    const nextBtn = document.getElementById('gallery-next-btn');
+
+    if (titleEl) titleEl.textContent = gallery.title || 'Galería';
+    if (descEl) {
+      descEl.textContent = gallery.description || '';
+      descEl.style.display = gallery.description ? 'block' : 'none';
+    }
+
+    this.currentGallery = { images, index: 0 };
+
+    const updateViewer = () => {
+      const current = images[this.currentGallery.index];
+      if (imageEl) imageEl.src = current.imageUrl;
+      if (counterEl) counterEl.textContent = `${this.currentGallery.index + 1} / ${images.length}`;
+      if (prevBtn) prevBtn.disabled = images.length <= 1;
+      if (nextBtn) nextBtn.disabled = images.length <= 1;
+      if (thumbsEl) {
+        const thumbs = thumbsEl.querySelectorAll('.gallery-thumb');
+        thumbs.forEach((t, i) => t.classList.toggle('active', i === this.currentGallery.index));
+        const activeThumb = thumbs[this.currentGallery.index];
+        if (activeThumb) {
+          activeThumb.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+        }
+      }
+    };
+
+    if (thumbsEl) {
+      thumbsEl.innerHTML = images.map((img, i) => `
+        <button class="gallery-thumb${i === 0 ? ' active' : ''}" data-index="${i}" type="button" aria-label="Ir a imagen ${i + 1}">
+          <img src="${img.imageUrl}" alt="Imagen ${i + 1}" loading="lazy">
+        </button>
+      `).join('');
+
+      thumbsEl.querySelectorAll('.gallery-thumb').forEach(btn => {
+        btn.addEventListener('click', () => {
+          this.currentGallery.index = parseInt(btn.dataset.index, 10) || 0;
+          updateViewer();
+        });
+      });
+    }
+
+    if (prevBtn) {
+      prevBtn.onclick = () => {
+        this.currentGallery.index = (this.currentGallery.index - 1 + images.length) % images.length;
+        updateViewer();
+      };
+    }
+    if (nextBtn) {
+      nextBtn.onclick = () => {
+        this.currentGallery.index = (this.currentGallery.index + 1) % images.length;
+        updateViewer();
+      };
+    }
+
+    this._galleryKeyHandler = (e) => {
+      if (!modal?.classList.contains('active')) return;
+      if (e.key === 'ArrowLeft') prevBtn?.click();
+      else if (e.key === 'ArrowRight') nextBtn?.click();
+      else if (e.key === 'Escape') this.closeGalleryModal();
+    };
+    document.addEventListener('keydown', this._galleryKeyHandler);
+
+    updateViewer();
+    if (modal) modal.classList.add('active');
+  }
+
+  closeGalleryModal() {
+    const modal = document.getElementById('gallery-modal');
+    if (modal) modal.classList.remove('active');
+    if (this._galleryKeyHandler) {
+      document.removeEventListener('keydown', this._galleryKeyHandler);
+      this._galleryKeyHandler = null;
+    }
+    this.currentGallery = null;
+  }
+
   getSectionTitle(section) {
     const titles = {
       'now-playing': 'Ahora Suena',
@@ -1064,6 +1245,7 @@ class PlaylistTemplate extends TemplateBase {
       'podcasts': 'Podcasts',
       'videocasts': 'Videocasts',
       'videos': 'Ranking Musical',
+      'galleries': 'Galerias',
       'sponsors': 'Patrocinadores',
       'promotions': 'Anuncios',
       'social': 'Redes Sociales',
@@ -1078,7 +1260,8 @@ class PlaylistTemplate extends TemplateBase {
       'news-modal': 'closeNewsModal',
       'podcast-modal': 'closePodcastModal',
       'videocast-modal': 'closeVideocastModal',
-      'video-modal': 'closeVideoModal'
+      'video-modal': 'closeVideoModal',
+      'gallery-modal': 'closeGalleryModal'
     };
     
     Object.entries(modalIds).forEach(([id, method]) => {
@@ -1120,6 +1303,13 @@ class PlaylistTemplate extends TemplateBase {
         e.preventDefault();
         const id = videocastLink.getAttribute('data-videocast-id');
         this.openVideocastModal(id);
+        return;
+      }
+      const galleryCard = e.target.closest('[data-gallery-id]');
+      if (galleryCard) {
+        e.preventDefault();
+        const id = galleryCard.getAttribute('data-gallery-id');
+        this.openGalleryModal(id);
         return;
       }
     });
